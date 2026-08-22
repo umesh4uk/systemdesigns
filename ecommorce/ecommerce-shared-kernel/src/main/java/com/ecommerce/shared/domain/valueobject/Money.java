@@ -1,6 +1,8 @@
 package com.ecommerce.shared.domain.valueobject;
 
 import com.ecommerce.shared.exception.DomainException;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -10,6 +12,9 @@ import java.util.Objects;
 /**
  * Money value object. Uses BigDecimal to avoid floating-point precision issues.
  * All arithmetic respects the currency's default fraction digits.
+ *
+ * <p>Jackson-serializes as {@code {"amount":"19.99","currencyCode":"USD"}} so it
+ * can be round-tripped through Redis without polymorphic type metadata.
  */
 public final class Money {
 
@@ -21,6 +26,14 @@ public final class Money {
     private Money(BigDecimal amount, Currency currency) {
         this.amount = amount.setScale(currency.getDefaultFractionDigits(), RoundingMode.HALF_EVEN);
         this.currency = currency;
+    }
+
+    /** Jackson deserialization constructor. */
+    @JsonCreator
+    public static Money fromJson(
+            @JsonProperty("amount")       BigDecimal amount,
+            @JsonProperty("currencyCode") String currencyCode) {
+        return of(amount, currencyCode);
     }
 
     public static Money of(BigDecimal amount, String currencyCode) {
