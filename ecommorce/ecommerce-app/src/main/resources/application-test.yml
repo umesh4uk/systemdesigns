@@ -1,0 +1,13 @@
+# Test profile — Testcontainers manages DB/Redis/Kafka
+spring:
+  jpa:
+    show-sql: false
+  flyway:
+    enabled: true
+  kafka:
+    bootstrap-servers: ${spring.embedded.kafka.brokers:localhost:9092}
+
+logging:
+  level:
+    com.ecommerce: DEBUG
+    org.springframework.security: WARN
