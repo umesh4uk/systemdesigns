@@ -5,7 +5,6 @@ import com.ecommerce.identity.domain.model.Customer;
 import com.ecommerce.identity.domain.repository.CustomerRepository;
 import com.ecommerce.identity.infrastructure.security.JwtProperties;
 import com.ecommerce.identity.infrastructure.security.JwtTokenProvider;
-import com.ecommerce.shared.domain.event.DomainEvent;
 import com.ecommerce.shared.exception.BusinessRuleException;
 import com.ecommerce.shared.exception.ConflictException;
 import lombok.RequiredArgsConstructor;
@@ -68,7 +67,8 @@ public class AuthService {
         }
 
         String accessToken  = tokenProvider.generateAccessToken(
-                customer.getId(), customer.getEmail(), List.of("ROLE_CUSTOMER"));
+                customer.getId(), customer.getEmail(),
+                List.of("ROLE_" + customer.getRole()));   // embed real role from DB
         String refreshToken = tokenProvider.generateRefreshToken(customer.getId());
 
         return TokenResponse.of(accessToken, refreshToken, jwtProperties.getAccessTokenExpirySeconds());
@@ -89,7 +89,8 @@ public class AuthService {
         }
 
         String newAccess  = tokenProvider.generateAccessToken(
-                customer.getId(), customer.getEmail(), List.of("ROLE_CUSTOMER"));
+                customer.getId(), customer.getEmail(),
+                List.of("ROLE_" + customer.getRole()));
         String newRefresh = tokenProvider.generateRefreshToken(customer.getId());
 
         return TokenResponse.of(newAccess, newRefresh, jwtProperties.getAccessTokenExpirySeconds());

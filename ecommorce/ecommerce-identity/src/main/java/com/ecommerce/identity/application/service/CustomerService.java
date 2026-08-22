@@ -10,8 +10,6 @@ import com.ecommerce.shared.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -143,6 +141,31 @@ public class CustomerService {
         Customer saved = customerRepository.save(customer);
         publishEvents(saved);
         return customerMapper.toResponse(saved);
+    }
+
+    /**
+     * Assign a new platform role to a customer account.
+     * Only admins can call this; enforced at the controller layer via {@code @PreAuthorize}.
+     *
+     * <p>Why here and not in AuthService? Role management is a customer-profile concern,
+     * not an authentication concern. AuthService only handles credential flows.
+     */
+    @Transactional
+    public CustomerResponse changeRole(UUID customerId, String newRole) {
+        // Validate the role is one we know about
+        java.util.Set<String> valid = java.util.Set.of(
+                com.ecommerce.shared.security.AppRole.CUSTOMER,
+                com.ecommerce.shared.security.AppRole.ADMIN,
+                com.ecommerce.shared.security.AppRole.INVENTORY_MANAGER,
+                com.ecommerce.shared.security.AppRole.ORDER_MANAGER);
+        if (!valid.contains(newRole)) {
+            throw new com.ecommerce.shared.exception.BusinessRuleException(
+                    "INVALID_ROLE", "Unknown role: " + newRole
+                            + ". Must be one of: " + valid);
+        }
+        Customer customer = loadCustomer(customerId);
+        customer.changeRole(newRole);
+        return customerMapper.toResponse(customerRepository.save(customer));
     }
 
     // ------------------------------------------------------------------ helpers

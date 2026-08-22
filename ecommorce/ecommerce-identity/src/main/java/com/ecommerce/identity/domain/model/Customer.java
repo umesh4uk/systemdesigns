@@ -8,6 +8,7 @@ import com.ecommerce.shared.domain.valueobject.EmailAddress;
 import com.ecommerce.shared.domain.valueobject.PhoneNumber;
 import com.ecommerce.shared.exception.BusinessRuleException;
 import com.ecommerce.shared.exception.ResourceNotFoundException;
+import com.ecommerce.shared.security.AppRole;
 import jakarta.persistence.*;
 import lombok.Getter;
 
@@ -52,6 +53,15 @@ public class Customer extends AggregateRoot {
     @Column(name = "status", nullable = false, length = 30)
     private CustomerStatus status;
 
+    /**
+     * The role assigned to this account — determines what they can do in the platform.
+     * Stored as a string so new roles can be added without an enum migration.
+     * Defaults to {@link AppRole#CUSTOMER} for all self-registered accounts.
+     * Staff roles (ADMIN, INVENTORY_MANAGER, ORDER_MANAGER) are set by an existing ADMIN.
+     */
+    @Column(name = "role", nullable = false, length = 30)
+    private String role = AppRole.CUSTOMER;
+
     @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private final List<CustomerAddress> addresses = new ArrayList<>();
 
@@ -83,6 +93,16 @@ public class Customer extends AggregateRoot {
 
     public void changePassword(String newPasswordHash) {
         this.passwordHash = newPasswordHash;
+    }
+
+    /**
+     * Assign a platform role to this customer account.
+     * Only an ADMIN can call this — enforced at the application-service layer.
+     *
+     * @param newRole one of {@link AppRole}'s constants
+     */
+    public void changeRole(String newRole) {
+        this.role = newRole;
     }
 
     // ------------------------------------------------------------------ status

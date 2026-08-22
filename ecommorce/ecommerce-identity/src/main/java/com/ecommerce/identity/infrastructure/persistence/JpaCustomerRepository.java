@@ -20,4 +20,9 @@ public interface JpaCustomerRepository extends JpaRepository<Customer, UUID> {
 
     @Query("SELECT c FROM Customer c LEFT JOIN FETCH c.addresses WHERE c.id = :id")
     Optional<Customer> findByIdWithAddresses(@Param("id") UUID id);
+
+    // ── Dashboard queries ─────────────────────────────────────────────────────
+    long countByStatus(com.ecommerce.identity.domain.model.CustomerStatus status);
+
+    long countByCreatedAtAfter(java.time.Instant after);
 }

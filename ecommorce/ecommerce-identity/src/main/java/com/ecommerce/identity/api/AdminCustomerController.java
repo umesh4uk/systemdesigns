@@ -42,4 +42,12 @@ public class AdminCustomerController {
     public ApiResponse<CustomerResponse> activate(@PathVariable UUID customerId) {
         return ApiResponse.success(customerService.activateCustomer(customerId));
     }
+
+    @Operation(summary = "Change a customer's platform role")
+    @PatchMapping("/{customerId}/role")
+    public ApiResponse<CustomerResponse> changeRole(
+            @PathVariable UUID customerId,
+            @Valid @RequestBody com.ecommerce.identity.application.dto.ChangeRoleRequest request) {
+        return ApiResponse.success(customerService.changeRole(customerId, request.role()));
+    }
 }
