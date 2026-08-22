@@ -1,0 +1,92 @@
+# Default deny-all, then explicitly allow only required paths
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+---
+# API pod: allow ingress from ingress-controller, egress to postgres/redis/kafka/DNS
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-api
+spec:
+  podSelector:
+    matchLabels:
+      app: ecommerce-api
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - port: 8080
+  egress:
+    # PostgreSQL
+    - to:
+        - podSelector:
+            matchLabels:
+              app: ecommerce-postgres
+      ports:
+        - port: 5432
+    # Redis
+    - to:
+        - podSelector:
+            matchLabels:
+              app: ecommerce-redis
+      ports:
+        - port: 6379
+    # Kafka (external or in-cluster)
+    - ports:
+        - port: 9092
+        - port: 29092
+    # DNS
+    - ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+    # External HTTPS (mail, payment providers)
+    - ports:
+        - port: 443
+        - port: 587
+---
+# Frontend: allow ingress from ingress-controller only
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-frontend
+spec:
+  podSelector:
+    matchLabels:
+      app: ecommerce-frontend
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - port: 80
+  egress:
+    # Allow calling API service (for server-side proxy if configured)
+    - to:
+        - podSelector:
+            matchLabels:
+              app: ecommerce-api
+      ports:
+        - port: 8080
+    # DNS
+    - ports:
+        - port: 53
+          protocol: UDP

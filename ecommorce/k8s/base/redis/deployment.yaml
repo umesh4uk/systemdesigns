@@ -1,0 +1,86 @@
+# In-cluster Redis — suitable for staging/dev clusters.
+# For production, use a managed service (ElastiCache, Cloud Memorystore, etc.).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ecommerce-redis
+  labels:
+    app: ecommerce-redis
+    app.kubernetes.io/component: cache
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ecommerce-redis
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: ecommerce-redis
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser:    999
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          command: ["redis-server", "--appendonly", "yes"]
+          ports:
+            - containerPort: 6379
+
+          resources:
+            requests:
+              cpu:    50m
+              memory: 64Mi
+            limits:
+              cpu:    200m
+              memory: 256Mi
+
+          livenessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            initialDelaySeconds: 10
+            periodSeconds: 10
+
+          readinessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+
+          volumeMounts:
+            - name: redis-data
+              mountPath: /data
+
+      volumes:
+        - name: redis-data
+          persistentVolumeClaim:
+            claimName: redis-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ecommerce-redis
+  labels:
+    app: ecommerce-redis
+spec:
+  type: ClusterIP
+  selector:
+    app: ecommerce-redis
+  ports:
+    - port: 6379
+      targetPort: 6379
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: redis-pvc
+  labels:
+    app: ecommerce-redis
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi

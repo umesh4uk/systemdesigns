@@ -1,0 +1,57 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ecommerce-ingress
+  labels:
+    app.kubernetes.io/part-of: ecommerce-platform
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size:          "10m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout:       "60"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout:    "10"
+    nginx.ingress.kubernetes.io/proxy-send-timeout:       "60"
+    nginx.ingress.kubernetes.io/enable-cors:              "true"
+    nginx.ingress.kubernetes.io/cors-allow-origin:        "*"
+    nginx.ingress.kubernetes.io/cors-allow-methods:       "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-headers:       "Authorization, Content-Type, X-Correlation-Id"
+    # Rate limiting (100 req/min per IP)
+    nginx.ingress.kubernetes.io/limit-rpm:                "100"
+    nginx.ingress.kubernetes.io/limit-connections:        "20"
+    # TLS managed by cert-manager
+    cert-manager.io/cluster-issuer:                       "letsencrypt-prod"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - ecommerce.example.com
+        - api.ecommerce.example.com
+      secretName: ecommerce-tls
+  rules:
+    # API backend
+    - host: api.ecommerce.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: ecommerce-api
+                port:
+                  name: http
+    # Frontend (+ pass /api/* to backend for convenience)
+    - host: ecommerce.example.com
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: ecommerce-api
+                port:
+                  name: http
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: ecommerce-frontend
+                port:
+                  name: http
